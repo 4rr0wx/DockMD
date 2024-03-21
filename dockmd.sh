@@ -2,7 +2,7 @@
 # Author: 4rr0wx (https://github.com/4rr0wx)
 #A documentation generator from a docker-compose file
 
-# Version: 0.1
+# Version: 0.2
 
 
 
@@ -14,6 +14,12 @@ README_FILE="./README.md"
 # Start the README file with a title and a description
 echo "# Project Services" > $README_FILE
 echo "This README provides an overview of the services defined in the Docker Compose file of this project." >> $README_FILE
+echo "" >> $README_FILE
+echo "To start this stack:" >> $README_FILE
+echo "(Your working dir needs to be where the docker-compose file is)" >> $README_FILE
+echo "\`\`\`bash" >> $README_FILE
+echo "docker compose up -d" >> $README_FILE
+echo "\`\`\`" >> $README_FILE
 echo "" >> $README_FILE
 
 # Check if Docker Compose file exists
