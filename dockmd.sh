@@ -2,7 +2,7 @@
 # Author: 4rr0wx (https://github.com/4rr0wx)
 # A documentation generator from a docker-compose file, including a Table of Contents
 
-# Version: 0.3
+# Version: 0.9
 
 # Path to the Docker Compose file
 DOCKER_COMPOSE_FILE="$1"
