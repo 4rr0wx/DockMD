@@ -8,10 +8,22 @@ A documentation generator from a docker-compose file
 
 
 # Installation and requirements
-- TBD
+This script uses the package **yq** to parse the yml file.
+To Install:
+- For Ubuntu and Debian:
+```bash
+snap install yq
+```
+- For Mac (brew needs to be installed):
+```bash
+brew install yq
+```
 
 # Usage
-- TBD
+```bash
+dockmd <./path to docker compose>
+```
+The script will then start analyzing the docker-compose file provided and will create a `README.md` file in the directory where the script is started from.
 
 # Examples
 - TBD
