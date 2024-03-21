@@ -10,8 +10,26 @@ DOCKER_COMPOSE_FILE="$1"
 COMPOSE_DIR=$(dirname "$DOCKER_COMPOSE_FILE")
 # Path to the README file to generate, now relative to the Docker Compose file's location
 README_FILE="$COMPOSE_DIR/README.md"
+# Temporary README file for comparison
+TEMP_README_FILE="$COMPOSE_DIR/README_TEMP.md"
+# File to keep track of the README version
+VERSION_FILE="$COMPOSE_DIR/README_VERSION.txt"
 
-# Start the README file with a title and a description
+# Check if Docker Compose file exists
+if [ ! -f "$DOCKER_COMPOSE_FILE" ]; then
+    echo "Docker Compose file not found: $DOCKER_COMPOSE_FILE" >&2
+    exit 1
+fi
+
+# Initialize or read the version number
+if [ ! -f "$VERSION_FILE" ]; then
+    echo "1" > "$VERSION_FILE"
+    VERSION=1
+else
+    VERSION=$(<"$VERSION_FILE")
+fi
+
+# Start the temporary README file with a title, description, and instructions
 {
 echo "# Project Services"
 echo "This README provides an overview of the services defined in the Docker Compose file of this project."
@@ -22,13 +40,7 @@ echo "\`\`\`bash"
 echo "docker compose up -d"
 echo "\`\`\`"
 echo ""
-} > "$README_FILE"
-
-# Check if Docker Compose file exists
-if [ ! -f "$DOCKER_COMPOSE_FILE" ]; then
-    echo "Docker Compose file not found: $DOCKER_COMPOSE_FILE" >&2
-    exit 1
-fi
+} > "$TEMP_README_FILE"
 
 # Placeholder for services to generate TOC
 declare -a services
@@ -36,19 +48,18 @@ declare -a services
 # Extract service names for TOC
 mapfile -t services < <(yq e '.services | keys | .[]' "$DOCKER_COMPOSE_FILE")
 
-# Generate TOC
+# Generate TOC in the temporary file
 {
 echo "## Table of Contents"
 echo "- [Project Services](#project-services)"
-echo "  - [Services](#services)"
 for service in "${services[@]}"; do
     echo "    - [$service](#$service)"
 done
 echo ""
-} >> "$README_FILE"
+} >> "$TEMP_README_FILE"
 
-# Extract and write service information
-echo "## Services" >> "$README_FILE"
+# Extract and write service information to the temporary file
+echo "## Services" >> "$TEMP_README_FILE"
 for service_name in "${services[@]}"; do
     {
     echo "### $service_name"
@@ -59,28 +70,53 @@ for service_name in "${services[@]}"; do
     ports=$(yq e ".services.$service_name.ports | .[]" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
     if [ "$ports" != "null" ] && [ ! -z "$ports" ]; then
         echo "- **Ports:**"
-        while IFS= read -r port; do
+        echo "$ports" | while IFS= read -r port; do
             echo "  - $port"
-        done <<< "$ports"
+        done
     fi
     # Extract volumes
     volumes=$(yq e ".services.$service_name.volumes | .[]" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
     if [ "$volumes" != "null" ] && [ ! -z "$volumes" ]; then
         echo "- **Volumes:**"
-        while IFS= read -r volume; do
+        echo "$volumes" | while IFS= read -r volume; do
             echo "  - $volume"
-        done <<< "$volumes"
+        done
     fi
     # Extract environment variables
     env_vars=$(yq e ".services.$service_name.environment | to_entries | .[] | .key + \": \" + .value" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
     if [ "$env_vars" != "null" ] && [ ! -z "$env_vars" ]; then
         echo "- **Environment Variables:**"
-        while IFS= read -r env_var; do
+        while IFS= read -r env_var; do           
             echo "  - $env_var"
         done <<< "$env_vars"
     fi
     echo ""
-    } >> "$README_FILE"
+    } >> "$TEMP_README_FILE"
 done
 
-echo "README.md has been generated in $COMPOSE_DIR."
+# Add the Last Changed and Version to the temporary README
+        {
+        echo "## Version"
+        echo "For the latest version of this README, view README_VERSION.txt"
+        } >> "$TEMP_README_FILE"
+
+# Check if README already exists and if it's different from the temporary one
+if [ -f "$README_FILE" ]; then
+    if ! cmp --silent "$README_FILE" "$TEMP_README_FILE" ; then
+        mv "$TEMP_README_FILE" "$README_FILE"
+        echo "README.md has been updated in $COMPOSE_DIR."
+        # Increment the version number and update the Last Changed timestamp
+        ((VERSION++))
+
+        echo "$VERSION" > "$VERSION_FILE"
+        echo "README.md version updated to $VERSION."
+    else
+        echo "README.md already exists and is up to date in $COMPOSE_DIR."
+        rm "$TEMP_README_FILE"
+    fi
+else
+    mv "$TEMP_README_FILE" "$README_FILE"
+    echo "README.md has been generated in $COMPOSE_DIR."
+    # No need to increment version for the first creation
+fi
+
