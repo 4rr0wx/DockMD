@@ -29,6 +29,18 @@ else
     VERSION=$(<"$VERSION_FILE")
 fi
 
+# Function to prompt user for section selection
+prompt_user_selection() {
+    echo "Select sections to include in the README (y/n):"
+    read -p "Include services? (y/n): " include_services
+    read -p "Include volumes? (y/n): " include_volumes
+    read -p "Include networks? (y/n): " include_networks
+    read -p "Include environment variables? (y/n): " include_env_vars
+}
+
+# Call the function to prompt user for section selection
+prompt_user_selection
+
 # Start the temporary README file with a title, description, and instructions
 {
 echo "# Project Services"
@@ -75,20 +87,24 @@ for service_name in "${services[@]}"; do
         done
     fi
     # Extract volumes
-    volumes=$(yq e ".services.$service_name.volumes | .[]" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
-    if [ "$volumes" != "null" ] && [ ! -z "$volumes" ]; then
-        echo "- **Volumes:**"
-        echo "$volumes" | while IFS= read -r volume; do
-            echo "  - $volume"
-        done
+    if [ "$include_volumes" == "y" ]; then
+        volumes=$(yq e ".services.$service_name.volumes | .[]" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
+        if [ "$volumes" != "null" ] && [ ! -z "$volumes" ]; then
+            echo "- **Volumes:**"
+            echo "$volumes" | while IFS= read -r volume; do
+                echo "  - $volume"
+            done
+        fi
     fi
     # Extract environment variables
-    env_vars=$(yq e ".services.$service_name.environment | to_entries | .[] | .key + \": \" + .value" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
-    if [ "$env_vars" != "null" ] && [ ! -z "$env_vars" ]; then
-        echo "- **Environment Variables:**"
-        while IFS= read -r env_var; do           
-            echo "  - $env_var"
-        done <<< "$env_vars"
+    if [ "$include_env_vars" == "y" ]; then
+        env_vars=$(yq e ".services.$service_name.environment | to_entries | .[] | .key + \": \" + .value" "$DOCKER_COMPOSE_FILE" 2>/dev/null)
+        if [ "$env_vars" != "null" ] && [ ! -z "$env_vars" ]; then
+            echo "- **Environment Variables:**"
+            while IFS= read -r env_var; do           
+                echo "  - $env_var"
+            done <<< "$env_vars"
+        fi
     fi
     echo ""
     } >> "$TEMP_README_FILE"
