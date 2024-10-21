@@ -103,13 +103,35 @@ done
 # Check if README already exists and if it's different from the temporary one
 if [ -f "$README_FILE" ]; then
     if ! cmp --silent "$README_FILE" "$TEMP_README_FILE" ; then
-        mv "$TEMP_README_FILE" "$README_FILE"
-        echo "README.md has been updated in $COMPOSE_DIR."
-        # Increment the version number and update the Last Changed timestamp
-        ((VERSION++))
+        echo "README.md already exists. What would you like to do?"
+        echo "1. Overwrite"
+        echo "2. Append"
+        echo "3. Do nothing"
+        read -p "Enter your choice (1/2/3): " choice
 
-        echo "$VERSION" > "$VERSION_FILE"
-        echo "README.md version updated to $VERSION."
+        case $choice in
+            1)
+                mv "$TEMP_README_FILE" "$README_FILE"
+                echo "README.md has been overwritten in $COMPOSE_DIR."
+                # Increment the version number and update the Last Changed timestamp
+                ((VERSION++))
+                echo "$VERSION" > "$VERSION_FILE"
+                echo "README.md version updated to $VERSION."
+                ;;
+            2)
+                cat "$TEMP_README_FILE" >> "$README_FILE"
+                rm "$TEMP_README_FILE"
+                echo "New content has been appended to README.md in $COMPOSE_DIR."
+                ;;
+            3)
+                rm "$TEMP_README_FILE"
+                echo "No changes made to README.md."
+                ;;
+            *)
+                rm "$TEMP_README_FILE"
+                echo "Invalid choice. No changes made to README.md."
+                ;;
+        esac
     else
         echo "README.md already exists and is up to date in $COMPOSE_DIR."
         rm "$TEMP_README_FILE"
@@ -119,4 +141,3 @@ else
     echo "README.md has been generated in $COMPOSE_DIR."
     # No need to increment version for the first creation
 fi
-
