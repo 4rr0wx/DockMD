@@ -14,6 +14,8 @@ README_FILE="$COMPOSE_DIR/README.md"
 TEMP_README_FILE="$COMPOSE_DIR/README_TEMP.md"
 # File to keep track of the README version
 VERSION_FILE="$COMPOSE_DIR/README_VERSION.txt"
+# Path to the .env file
+ENV_FILE="$COMPOSE_DIR/.env"
 
 # Check if Docker Compose file exists
 if [ ! -f "$DOCKER_COMPOSE_FILE" ]; then
@@ -70,6 +72,21 @@ done
 echo ""
 } >> "$TEMP_README_FILE"
 
+# Function to load environment variables from .env file
+load_env_file() {
+    if [ -f "$ENV_FILE" ]; then
+        echo "Loading environment variables from .env file..."
+        set -a
+        source "$ENV_FILE"
+        set +a
+    else
+        echo ".env file not found. Skipping..."
+    fi
+}
+
+# Call the function to load environment variables from .env file
+load_env_file
+
 # Extract and write service information to the temporary file
 echo "## Services" >> "$TEMP_README_FILE"
 for service_name in "${services[@]}"; do
@@ -104,6 +121,16 @@ for service_name in "${services[@]}"; do
             while IFS= read -r env_var; do           
                 echo "  - $env_var"
             done <<< "$env_vars"
+        fi
+        # Merge environment variables from .env file
+        if [ -f "$ENV_FILE" ]; then
+            while IFS= read -r line; do
+                if [[ "$line" == *=* ]]; then
+                    key=$(echo "$line" | cut -d '=' -f 1)
+                    value=$(echo "$line" | cut -d '=' -f 2-)
+                    echo "  - $key: $value"
+                fi
+            done < "$ENV_FILE"
         fi
     fi
     echo ""
